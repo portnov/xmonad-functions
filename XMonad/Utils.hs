@@ -41,24 +41,20 @@ import XMonad.Actions.OnScreen
 import XMonad.Prompt
 import XMonad.Prompt.Input
 
--- import Themes
-
--- Определения
-
--- Аналог +Control.Monad.when+ для +ManageHook+.
-
+-- | An analogue of @Control.Monad.when@ for @ManageHook@
 whenH :: Bool -> ManageHook -> ManageHook
 whenH condition action = if condition then action else doF id
 
+-- | An analogue of @Control.Monad.unless@ for @ManageHook@
 unlessH :: Bool -> ManageHook -> ManageHook
 unlessH condition action = if condition then doF id else action
 
--- Аналог +XMonad.whenJust+ для +ManageHook+.
-
+-- | An analogue of @XMonad.whenJust@ for @ManageHook@.
 whenJustH :: Maybe a -> (a -> ManageHook) -> ManageHook
 whenJustH (Just x) action = action x
 whenJustH Nothing  _      = doF id
 
+-- | Set X11 root window atom.
 setRootAtom :: String -> String -> X ()
 setRootAtom name value = withDisplay (io . setRootAtom' name value)
     where setRootAtom' atom name d = do
@@ -66,6 +62,7 @@ setRootAtom name value = withDisplay (io . setRootAtom' name value)
                                        rw <- rootWindow d $ defaultScreen d
                                        setTextProperty d rw name a
 
+-- | Get X11 root window atom.
 getRootAtom :: String -> X [String]
 getRootAtom name = withDisplay (io . getRootAtom' name)
     where getRootAtom' atom d = do
@@ -76,6 +73,7 @@ getRootAtom name = withDisplay (io . getRootAtom' name)
               Just tp -> wcTextPropertyToTextList d tp
               Nothing -> return []
 
+-- | Create new workspace and move current window to it.
 toNewWorkspace :: XPConfig -> X ()
 toNewWorkspace xpconfig = do
   x <- inputPrompt xpconfig "New workspace name:"
@@ -84,20 +82,18 @@ toNewWorkspace xpconfig = do
     addHiddenWorkspace myWksp
     windows $ W.shift myWksp
 
--- Выбрать алгоритм расположения окон по имени.
-
+-- | Select widow layout by name.
 chooseLayout name = sendMessage $ JumpToLayout name
 
--- Получить название текущего layout.
-
+-- | Get name of current layout.
 getLayout :: X String
 getLayout = withWindowSet (\s -> return $ description $ W.layout $ W.workspace $ W.current s)
 
--- Список окон на текущем рабочем месте.
-
+-- | List of windows in current workspace.
 currentList :: X [Window]
 currentList = withWindowSet (\s -> return $ W.integrate' $ W.stack $ W.workspace $ W.current s)
 
+-- | List of windows in given workspace.
 windowsOnWorkspace :: WorkspaceId -> X [Window]
 windowsOnWorkspace name =
     withWindowSet $ \s -> do
@@ -109,91 +105,36 @@ windowsOnWorkspace name =
         Nothing -> return []
         Just wksp -> return $ W.integrate' $ W.stack wksp
 
--- Получить название текущего рабочего места.
-
+-- | Get name of current workspace.
 getCurrentWorkspace :: X WorkspaceId
 getCurrentWorkspace = withWindowSet (\ws -> return $ W.tag $ W.workspace $ W.current ws)
 
--- Проверить, является ли окно плавающим.
-
+-- | Check if the window is floating
 isFloat :: Window -> X Bool
 isFloat w = do
   fls <- withWindowSet (return . W.floating)
   return (w `M.member` fls)
 
--- xrandr orient = "xrandr -o " ++ orient ++ "; xrandr --output 'VGA-1' --right-of 'DVI-I-1' --mode '1280x1024'"
-
--- Запустить скрипт +recently-used.py+ для заданных типов файлов. Этот скрипт показывает
--- список последних открывавшихся файлов заданных типов.
-
-{-
-recent types = "recently-used.py " ++ unwords (map mime types)
-  where
-    mime t = fromMaybe "" $ lookup t pairs
-    pairs = [("pdf", "application/pdf application/epub+zip"),
-             ("djvu", "application/djvu"),
-             ("doc", "application/msword"),
-             ("png", "image/png")]
-
-Открыть указанную сессию GVim.
-
-vimsession :: String -> X ()
-vimsession name = do
-  home <- io $ getEnv "HOME"
-  let path = home </> ".vim/sessions" </> (name ++ ".vimsession")
-  spawn ("gvim -S " ++ path)
-
-Выбрать сессию GVim и открыть её.
-
-vimsessions :: X ()
-vimsessions = do
-  home <- io $ getEnv "HOME"
-  paths <- io $ (concat . fst) `fmap` globDir [compile "*.vimsession"] (home </> ".vim/sessions")
-  let sessions = map (dropExtension . takeFileName) paths
-  selected <- gridselect myGSConfig $ zip sessions sessions
-  whenJust selected vimsession
-
-Запустить один из нескольких текстовых редакторов.
-
-textEditors = do
-  let editors = ["gvim", "kate", "gedit"]
-  selected <- gridselect myGSConfig $ zip editors editors
-  case selected of
-    Nothing     -> return ()
-    Just "gvim" -> vimsessions
-    Just editor -> spawn editor
-    -}
-
 role = stringProperty "WM_WINDOW_ROLE"
 
--- Получить список окон, подходящих под запрос.
-
+-- | Get the list of windows matching to query.
 matchingWindows :: Query Bool -> X [Window]
 matchingWindows query = withWindowSet (return . W.allWindows) >>= filterM (runQuery query)
-
-{-
-При закрытии (точнее, unmap) окна — удалить текущее рабочее пространство, если оно осталось пустым.
-Пространство "dashboard" — не удалять.
-
-unmapEventHook :: Event -> X All
-unmapEventHook (UnmapEvent {}) = do
-  current <- getCurrentWorkspace
-  when (not $ "dashboard" `isPrefixOf` current || "my-" `isPrefixOf` current) $
-      removeEmptyWorkspace
-  return (All True)
-unmapEventHook _ = return (All True)
--}
 
 -- Запустить одно из действий в зависимости от текущего layout.
 -- Первый аргумент — список пар вида (+описание_layout+, +действие_на_этом_layout+)
 
-caseLayoutOf :: [(String, X a)] -> X a -> X a
+-- | Run one of actions depending of current layout.
+caseLayoutOf :: [(String, X a)] -- ^ [(layout name, action)]
+              -> X a -- ^ Default action
+              -> X a
 caseLayoutOf pairs def = do
   layout <- getLayout
   case lookup layout pairs of
     Nothing -> def
     Just x  -> x
 
+-- | Run one of actions depending on current layout
 ifLayout :: [String] -> X a -> X a -> X a
 ifLayout lst yes no = do
   layout <- getLayout
@@ -201,8 +142,8 @@ ifLayout lst yes no = do
     then yes
     else no
 
--- Если текущее окно — master, не делать ничего; иначе поменять его местами с master-окном.
-
+-- | If the current window is master, do nothing;
+-- otherwise, swap it with master window.
 enshureMaster :: X ()
 enshureMaster =
   withFocused $ \w -> do
@@ -214,13 +155,11 @@ enshureMaster =
                   then return ()
                   else windows W.swapMaster
 
--- Аналог +(=?)+, но проверяет не точное совпадение, а соответствие регулярному выражению.
-
+-- | An analogue of @(=?)@, but checks regular expression match
 (~?) :: (Functor f) => f String -> String -> f Bool
 q ~? x = fmap (=~ x) q
 
--- Переключиться на выбранное (с помощью +X.A.GridSelect+) окно из заданного списка.
-
+-- | Switch to selected (by using @X.A.GridSelect@) window from specified list.
 selectOneWindow :: GSConfig Window -> [Window] -> X ()
 selectOneWindow gsconfig wins = do
     titles <- mapM windowTitle wins
@@ -231,8 +170,7 @@ selectOneWindow gsconfig wins = do
   where
     windowTitle w = show `fmap` getName w
 
--- Выбрать окно на текущем рабочем месте.
-
+-- | Switch to selected window in current workspace.
 searchInWorkspace :: GSConfig Window -> X ()
 searchInWorkspace gsconfig = do
   ws <- currentList
@@ -241,6 +179,7 @@ searchInWorkspace gsconfig = do
     [x] -> return ()
     _   -> selectOneWindow gsconfig ws
 
+-- | Move window to specified screen
 moveToScreen :: ScreenId -> ManageHook
 moveToScreen sid = fromWindowOp $ \w -> windows $ \ws ->
   case W.lookupWorkspace sid ws of
@@ -250,16 +189,15 @@ moveToScreen sid = fromWindowOp $ \w -> windows $ \ws ->
 changeWorkspaceOn :: ScreenId -> WorkspaceId -> ManageHook
 changeWorkspaceOn sid wksp = fromX $ windows $ viewOnScreen sid wksp
 
--- Делает +ManageHook+ из любой операции с окном.
-
+-- | Make a @ManageHook@ from any action on @Window@.
 fromWindowOp :: (Window -> X()) -> ManageHook
 fromWindowOp fn = ask >>= \w -> liftX (fn w) >> doF id
 
--- Делает +ManageHook+ из любого действия.
-
+-- | Make a @ManageHook@ from any @X@ action.
 fromX :: X () -> ManageHook
 fromX op = fromWindowOp $ const op
 
+-- | Create new workspace and move current window to it.
 createAndMove :: Bool -> (Maybe ScreenId) -> WorkspaceId -> ManageHook
 createAndMove jump mbSID wksp = do
   liftX (addHiddenWorkspace wksp)
