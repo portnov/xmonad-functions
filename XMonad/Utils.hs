@@ -2,6 +2,7 @@ module XMonad.Utils
   (
    getCurrentWorkspace,
    searchInWorkspace, enshureMaster,
+   getLayout,
    caseLayoutOf, ifLayout, currentList, windowsOnWorkspace, isFloat,
    matchingWindows, selectOneWindow,
    moveToScreen, changeWorkspaceOn,
