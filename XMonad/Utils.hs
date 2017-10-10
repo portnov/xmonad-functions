@@ -12,7 +12,8 @@ module XMonad.Utils
    fromX, fromWindowOp,
    whenH, unlessH, whenJustH,
    setRootAtom, getRootAtom,
-   role
+   role,
+   isMaster, checkIsMaster, ifMaster
   ) where
 
 import Control.Monad (filterM, when)
@@ -208,4 +209,28 @@ createAndMove jump mbSID wksp = do
     otherwise         -> doF id
   w <- ask
   doF (W.shiftWin wksp w) :: ManageHook
+
+-- | Is the focused window the \"master window\" of the current workspace?
+isMaster :: Query Bool
+isMaster = ask >>= (\w -> liftX $ withWindowSet $ \ws -> return $ Just w == master ws)
+  where
+    master :: WindowSet -> Maybe Window
+    master ws = 
+        case W.integrate' $ W.stack $ W.workspace $ W.current ws of
+             [] -> Nothing
+             (x:xs) -> Just x
+
+checkIsMaster :: X Bool
+checkIsMaster =
+  withWindowSet $ \ss -> do
+    case W.peek ss of
+      Just w -> runQuery isMaster w
+      Nothing -> return False
+
+ifMaster :: X a -> X a -> X a
+ifMaster true false = do
+  master <- checkIsMaster
+  if master
+    then true
+    else false
 
