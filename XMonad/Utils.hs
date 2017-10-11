@@ -14,6 +14,7 @@ module XMonad.Utils
    whenH, unlessH, whenJustH,
    setRootAtom, getRootAtom,
    role,
+   oneOf, allOf,
    isMaster, checkIsMaster, ifMaster
   ) where
 
@@ -234,4 +235,12 @@ ifMaster true false = do
   if master
     then true
     else false
+
+-- | Similar to @or@.
+oneOf :: [Query Bool] -> Query Bool
+oneOf list = foldl1 (<||>) list
+
+-- | Similar to @and@.
+allOf :: [Query Bool] -> Query Bool
+allOf list = foldl1 (<&&>) list
 
