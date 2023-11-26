@@ -169,7 +169,7 @@ selectOneWindow gsconfig wins = do
     selected <- gridselect gsconfig $ zip titles wins
     whenJust selected $ \w -> do
        focus w
-       sendMessage (RestoreMinimizedWin w)
+       -- sendMessage (RestoreMinimizedWin w)
   where
     windowTitle w = show `fmap` getName w
 
