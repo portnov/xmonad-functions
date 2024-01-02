@@ -204,13 +204,14 @@ fromX op = fromWindowOp $ const op
 createAndMove :: Bool -> (Maybe ScreenId) -> WorkspaceId -> ManageHook
 createAndMove jump mbSID wksp = do
   liftX (addHiddenWorkspace wksp)
-  case (mbSID, jump) of
-    (Nothing,  True)  -> fromX $ windows (W.view wksp)
-    (Just sid, False) -> doF (onlyOnScreen sid wksp)
-    (Just sid, True)  -> doF (viewOnScreen sid wksp)
-    otherwise         -> doF id
+  let switchScreen =
+        case (mbSID, jump) of
+          (Nothing,  True)  -> W.view wksp
+          (Just sid, False) -> onlyOnScreen sid wksp
+          (Just sid, True)  -> viewOnScreen sid wksp
+          otherwise         -> id
   w <- ask
-  doF (W.shiftWin wksp w) :: ManageHook
+  doF (switchScreen . W.shiftWin wksp w) :: ManageHook
 
 -- | Is the focused window the \"master window\" of the current workspace?
 isMaster :: Query Bool
