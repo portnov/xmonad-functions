@@ -6,7 +6,7 @@ module XMonad.Utils
    caseLayoutOf, ifLayout, currentList, windowsOnWorkspace, isFloat,
    matchingWindows, selectOneWindow,
    moveToScreen, changeWorkspaceOn,
-   toNewWorkspace,
+   toNewWorkspace, toNewWorkspace',
    createAndMove,
    chooseLayout,
    (~?),
@@ -78,10 +78,14 @@ getRootAtom name = withDisplay (io . getRootAtom' name)
 
 -- | Create new workspace and move current window to it.
 toNewWorkspace :: XPConfig -> X ()
-toNewWorkspace xpconfig = do
+toNewWorkspace xpconfig = toNewWorkspace' xpconfig ""
+
+-- | Create new workspace and move current window to it.
+toNewWorkspace' :: XPConfig -> String -> X ()
+toNewWorkspace' xpconfig prefix = do
   x <- inputPrompt xpconfig "New workspace name:"
   whenJust x $ \wksp -> do
-    let myWksp = "my-"++wksp
+    let myWksp = prefix++wksp
     addHiddenWorkspace myWksp
     windows $ W.shift myWksp
 
