@@ -7,7 +7,6 @@ module XMonad.Utils
    matchingWindows, selectOneWindow,
    moveToScreen, changeWorkspaceOn,
    toNewWorkspace, toNewWorkspace',
-   createAndMove,
    chooseLayout,
    (~?),
    fromX, fromWindowOp,
@@ -203,19 +202,6 @@ fromWindowOp fn = ask >>= \w -> liftX (fn w) >> doF id
 -- | Make a @ManageHook@ from any @X@ action.
 fromX :: X () -> ManageHook
 fromX op = fromWindowOp $ const op
-
--- | Create new workspace and move current window to it.
-createAndMove :: Bool -> (Maybe ScreenId) -> WorkspaceId -> ManageHook
-createAndMove jump mbSID wksp = do
-  liftX (addHiddenWorkspace wksp)
-  let switchScreen =
-        case (mbSID, jump) of
-          (Nothing,  True)  -> W.view wksp
-          (Just sid, False) -> onlyOnScreen sid wksp
-          (Just sid, True)  -> viewOnScreen sid wksp
-          otherwise         -> id
-  w <- ask
-  doF (switchScreen . W.shiftWin wksp w) :: ManageHook
 
 -- | Is the focused window the \"master window\" of the current workspace?
 isMaster :: Query Bool
